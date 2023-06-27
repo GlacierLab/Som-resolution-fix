@@ -14,7 +14,7 @@ namespace XGWin
 	// Token: 0x02000039 RID: 57
 	public class Form1 : Form
 	{
-		// Token: 0x060000C5 RID: 197 RVA: 0x000093F0 File Offset: 0x000075F0
+		// Token: 0x060000C5 RID: 197 RVA: 0x00009620 File Offset: 0x00007820
 		private string ChangeWindowModeText(bool isFullScreen)
 		{
 			string text = string.Empty;
@@ -39,7 +39,7 @@ namespace XGWin
 			return text;
 		}
 
-		// Token: 0x060000C6 RID: 198
+		// Token: 0x060000C6 RID: 198 RVA: 0x000096B0 File Offset: 0x000078B0
 		public Form1(params string[] args)
 		{
 			this.commandQueue = new Queue<Form1.MessageCommand>();
@@ -197,7 +197,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000C7 RID: 199 RVA: 0x00009CCC File Offset: 0x00007ECC
+		// Token: 0x060000C7 RID: 199 RVA: 0x00009EFC File Offset: 0x000080FC
 		public Form1(string comm)
 		{
 			this.commandQueue = new Queue<Form1.MessageCommand>();
@@ -208,16 +208,44 @@ namespace XGWin
 			this.keyPair = new Dictionary<Keys, bool>();
 			this.disp_width = 1920;
 			this.disp_height = 1080;
-			base..ctor();
 			this.InitializeComponent(this.client_width, this.client_height);
 			this.Text = "hoge";
 			Environment.Exit(0);
 		}
 
-		// Token: 0x060000C8 RID: 200 RVA: 0x00002888 File Offset: 0x00000A88
+		// Token: 0x060000C8 RID: 200
 		private void Form1_Shown(object sender, EventArgs e)
 		{
 			this.PreviewTitleInit(-1);
+			MultimediaTimer multimediaTimer = new MultimediaTimer();
+			string text = File.ReadAllText("targetFPS.txt", Encoding.UTF8);
+			multimediaTimer.Interval = 1000 / int.Parse(text);
+			multimediaTimer.Elapsed += delegate(object o, EventArgs e)
+			{
+				if (this.GLError)
+				{
+					return;
+				}
+				Queue<Form1.MessageCommand> queue = this.commandQueue;
+				lock (queue)
+				{
+					Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeCommandEnd);
+					this.commandQueue.Enqueue(messageCommand);
+					while (this.commandQueue.Count != 0)
+					{
+						Form1.MessageCommand messageCommand2 = this.commandQueue.Dequeue();
+						Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
+					}
+				}
+				if (Form1.GLDraw2() == 0)
+				{
+					this.GLError = true;
+					MessageBox.Show("エラーが発生したので、ツールを再起動してください");
+					this.bFinished = true;
+					Application.Exit();
+				}
+			};
+			multimediaTimer.Start();
 		}
 
 		// Token: 0x060000C9 RID: 201 RVA: 0x00002891 File Offset: 0x00000A91
@@ -251,7 +279,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "GLInit")]
 		private static extern int GLInit2(IntPtr hwnd, IntPtr hdc, int adr);
 
-		// Token: 0x060000CD RID: 205 RVA: 0x00009DCC File Offset: 0x00007FCC
+		// Token: 0x060000CD RID: 205 RVA: 0x00009FFC File Offset: 0x000081FC
 		private bool GLInit(IntPtr hwnd, IntPtr hdc, int adr)
 		{
 			if (this.GLError)
@@ -274,7 +302,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "GLInitToTitle")]
 		private static extern int GLInitToTitle2(IntPtr hwnd, IntPtr hdc);
 
-		// Token: 0x060000CF RID: 207 RVA: 0x00009E2C File Offset: 0x0000802C
+		// Token: 0x060000CF RID: 207
 		private bool GLInitToTitle(IntPtr hwnd, IntPtr hdc)
 		{
 			if (this.GLError)
@@ -287,7 +315,6 @@ namespace XGWin
 				this.GLError = true;
 				MessageBox.Show("エラーが発生したので、ツールを再起動してください");
 				this.bFinished = true;
-				Form1.SetDisplayFullScreen(Screen.FromControl(this).DeviceName, this.disp_width, this.disp_height);
 				Application.Exit();
 			}
 			return flag;
@@ -301,7 +328,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl)]
 		private static extern void APIPostMessageDLL(int type, uint wParam, uint lParam);
 
-		// Token: 0x060000D2 RID: 210 RVA: 0x00009E8C File Offset: 0x0000808C
+		// Token: 0x060000D2 RID: 210
 		private void GLDraw()
 		{
 			if (this.GLError)
@@ -324,7 +351,6 @@ namespace XGWin
 				this.GLError = true;
 				MessageBox.Show("エラーが発生したので、ツールを再起動してください");
 				this.bFinished = true;
-				Form1.SetDisplayFullScreen(Screen.FromControl(this).DeviceName, this.disp_width, this.disp_height);
 				Application.Exit();
 			}
 		}
@@ -380,22 +406,13 @@ namespace XGWin
 			this.timerFrame.Enabled = true;
 		}
 
-		// Token: 0x060000DE RID: 222 RVA: 0x00009F5C File Offset: 0x0000815C
+		// Token: 0x060000DE RID: 222
 		private void timerFrame_Tick(object sender, EventArgs e)
 		{
 			if (base.WindowState == FormWindowState.Maximized)
 			{
 				this.menuStrip1.Visible = this.mouse_y <= 34;
 				this.menuStrip1.BringToFront();
-			}
-			this.GLDraw();
-			this.FPSCount++;
-			DateTime now = DateTime.Now;
-			if ((now - this.befTime).TotalMilliseconds > 1000.0)
-			{
-				this.befTime = now;
-				this.FPSCount = 0;
-				GC.Collect();
 			}
 		}
 
@@ -415,7 +432,7 @@ namespace XGWin
 		[DllImport("Imm32.Dll")]
 		private static extern bool ImmSetOpenStatus(int hIMC, bool fOpen);
 
-		// Token: 0x060000E3 RID: 227 RVA: 0x00009FE4 File Offset: 0x000081E4
+		// Token: 0x060000E3 RID: 227 RVA: 0x0000A210 File Offset: 0x00008410
 		private void panel1_MouseDown(object sender, MouseEventArgs e)
 		{
 			if (this.inputFlg)
@@ -441,7 +458,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000E4 RID: 228 RVA: 0x0000A0C4 File Offset: 0x000082C4
+		// Token: 0x060000E4 RID: 228 RVA: 0x0000A2F0 File Offset: 0x000084F0
 		private void panel1_MouseUp(object sender, MouseEventArgs e)
 		{
 			Queue<Form1.MessageCommand> queue = this.commandQueue;
@@ -453,7 +470,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000E5 RID: 229 RVA: 0x0000A120 File Offset: 0x00008320
+		// Token: 0x060000E5 RID: 229 RVA: 0x0000A34C File Offset: 0x0000854C
 		private void panel1_MouseMove(object sender, MouseEventArgs e)
 		{
 			Queue<Form1.MessageCommand> queue = this.commandQueue;
@@ -468,7 +485,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000E6 RID: 230 RVA: 0x0000A1C0 File Offset: 0x000083C0
+		// Token: 0x060000E6 RID: 230 RVA: 0x0000A3EC File Offset: 0x000085EC
 		private void panel1_MouseWheel(object sender, MouseEventArgs e)
 		{
 			Queue<Form1.MessageCommand> queue = this.commandQueue;
@@ -480,7 +497,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000E7 RID: 231 RVA: 0x0000A21C File Offset: 0x0000841C
+		// Token: 0x060000E7 RID: 231 RVA: 0x0000A448 File Offset: 0x00008648
 		private bool isArrowKey(KeyEventArgs e)
 		{
 			if (this.keyMap.ContainsValue(e.KeyCode))
@@ -491,7 +508,7 @@ namespace XGWin
 			return false;
 		}
 
-		// Token: 0x060000E8 RID: 232 RVA: 0x0000A284 File Offset: 0x00008484
+		// Token: 0x060000E8 RID: 232 RVA: 0x0000A4B0 File Offset: 0x000086B0
 		private void Form1_KeyDown(object sender, KeyEventArgs e)
 		{
 			if (this.keyPair.ContainsKey(e.KeyCode) && this.keyPair[e.KeyCode])
@@ -569,7 +586,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000E9 RID: 233 RVA: 0x0000A534 File Offset: 0x00008734
+		// Token: 0x060000E9 RID: 233 RVA: 0x0000A760 File Offset: 0x00008960
 		private void Form1_KeyUp(object sender, KeyEventArgs e)
 		{
 			if (!this.keyPair.ContainsKey(e.KeyCode) || !this.keyPair[e.KeyCode])
@@ -633,10 +650,10 @@ namespace XGWin
 		// Token: 0x060000EA RID: 234 RVA: 0x000028DA File Offset: 0x00000ADA
 		private uint ConvertStickForce(KeyConfig.keyCode code, bool isDown)
 		{
-			return (uint)(((uint)code << 16) + (isDown ? 128 : 0));
+			return (uint)((ulong)((ulong)code << 16) + (ulong)(isDown ? 128L : 0L));
 		}
 
-		// Token: 0x060000EB RID: 235 RVA: 0x0000A75C File Offset: 0x0000895C
+		// Token: 0x060000EB RID: 235 RVA: 0x0000A988 File Offset: 0x00008B88
 		private void Form1_LostFocus(object sender, EventArgs e)
 		{
 			this.isShiftDown = false;
@@ -651,7 +668,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000EC RID: 236 RVA: 0x0000A7EC File Offset: 0x000089EC
+		// Token: 0x060000EC RID: 236 RVA: 0x0000AA18 File Offset: 0x00008C18
 		private void SetSystemMenuTrg(uint eventMask, uint w)
 		{
 			Queue<Form1.MessageCommand> queue = this.commandQueue;
@@ -664,27 +681,27 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000ED RID: 237 RVA: 0x000028EC File Offset: 0x00000AEC
+		// Token: 0x060000ED RID: 237 RVA: 0x000028EF File Offset: 0x00000AEF
 		private void VersionInfoToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(32768U, 0U);
 			this._version_dialog.Show();
 		}
 
-		// Token: 0x060000EE RID: 238 RVA: 0x00002905 File Offset: 0x00000B05
+		// Token: 0x060000EE RID: 238 RVA: 0x00002908 File Offset: 0x00000B08
 		private void KeyConfigToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(65536U, 0U);
 			Form1._keyconfig_dialog.Show(this);
 		}
 
-		// Token: 0x060000EF RID: 239 RVA: 0x0000291E File Offset: 0x00000B1E
+		// Token: 0x060000EF RID: 239 RVA: 0x00002921 File Offset: 0x00000B21
 		private int calcSize(int i0, int i1, float scale)
 		{
 			return (int)((float)i0 * scale - (float)i1 * scale);
 		}
 
-		// Token: 0x060000F0 RID: 240 RVA: 0x0000A848 File Offset: 0x00008A48
+		// Token: 0x060000F0 RID: 240 RVA: 0x0000AA74 File Offset: 0x00008C74
 		private void HelpToolStripMenuItem1_Click(object sender, EventArgs e)
 		{
 			switch (this.userLanguage)
@@ -708,99 +725,99 @@ namespace XGWin
 			this.SetSystemMenuTrg(131072U, 0U);
 		}
 
-		// Token: 0x060000F1 RID: 241 RVA: 0x0000292A File Offset: 0x00000B2A
+		// Token: 0x060000F1 RID: 241 RVA: 0x0000292D File Offset: 0x00000B2D
 		private void ChartToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(1024U, 0U);
 		}
 
-		// Token: 0x060000F2 RID: 242 RVA: 0x00002938 File Offset: 0x00000B38
+		// Token: 0x060000F2 RID: 242 RVA: 0x0000293B File Offset: 0x00000B3B
 		private void D4UStatusToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(2048U, 0U);
 		}
 
-		// Token: 0x060000F3 RID: 243 RVA: 0x00002946 File Offset: 0x00000B46
+		// Token: 0x060000F3 RID: 243 RVA: 0x00002949 File Offset: 0x00000B49
 		private void BackLogToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(4096U, 0U);
 		}
 
-		// Token: 0x060000F4 RID: 244 RVA: 0x00002954 File Offset: 0x00000B54
+		// Token: 0x060000F4 RID: 244 RVA: 0x00002957 File Offset: 0x00000B57
 		private void DictionaryToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(8192U, 0U);
 		}
 
-		// Token: 0x060000F5 RID: 245 RVA: 0x00002962 File Offset: 0x00000B62
+		// Token: 0x060000F5 RID: 245 RVA: 0x00002965 File Offset: 0x00000B65
 		private void OptionToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(16384U, 0U);
 		}
 
-		// Token: 0x060000F6 RID: 246 RVA: 0x00002970 File Offset: 0x00000B70
+		// Token: 0x060000F6 RID: 246 RVA: 0x00002973 File Offset: 0x00000B73
 		private void AutoToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(128U, 0U);
 		}
 
-		// Token: 0x060000F7 RID: 247 RVA: 0x0000297E File Offset: 0x00000B7E
+		// Token: 0x060000F7 RID: 247 RVA: 0x00002981 File Offset: 0x00000B81
 		private void TextSkipToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(256U, 0U);
 		}
 
-		// Token: 0x060000F8 RID: 248 RVA: 0x0000298C File Offset: 0x00000B8C
+		// Token: 0x060000F8 RID: 248 RVA: 0x0000298F File Offset: 0x00000B8F
 		private void HideTextAreaToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(512U, 0U);
 		}
 
-		// Token: 0x060000F9 RID: 249 RVA: 0x0000299A File Offset: 0x00000B9A
+		// Token: 0x060000F9 RID: 249 RVA: 0x0000299D File Offset: 0x00000B9D
 		private void QuickSaveToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(1U, 0U);
 		}
 
-		// Token: 0x060000FA RID: 250 RVA: 0x000029A4 File Offset: 0x00000BA4
+		// Token: 0x060000FA RID: 250 RVA: 0x000029A7 File Offset: 0x00000BA7
 		private void QuickLoadToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(2U, 0U);
 		}
 
-		// Token: 0x060000FB RID: 251 RVA: 0x000029AE File Offset: 0x00000BAE
+		// Token: 0x060000FB RID: 251 RVA: 0x000029B1 File Offset: 0x00000BB1
 		private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(4U, 0U);
 		}
 
-		// Token: 0x060000FC RID: 252 RVA: 0x000029B8 File Offset: 0x00000BB8
+		// Token: 0x060000FC RID: 252 RVA: 0x000029BB File Offset: 0x00000BBB
 		private void LoadToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(8U, 0U);
 		}
 
-		// Token: 0x060000FD RID: 253 RVA: 0x0000A8C4 File Offset: 0x00008AC4
+		// Token: 0x060000FD RID: 253 RVA: 0x0000AAF0 File Offset: 0x00008CF0
 		private void FullscreenToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			uint num = ((base.WindowState == FormWindowState.Maximized) ? 0U : 2U);
 			base.WindowState = (FormWindowState)num;
 		}
 
-		// Token: 0x060000FE RID: 254 RVA: 0x000029C2 File Offset: 0x00000BC2
+		// Token: 0x060000FE RID: 254 RVA: 0x000029C5 File Offset: 0x00000BC5
 		private void BackToTitleToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(32U, 0U);
 		}
 
-		// Token: 0x060000FF RID: 255 RVA: 0x000029CD File Offset: 0x00000BCD
+		// Token: 0x060000FF RID: 255 RVA: 0x000029D0 File Offset: 0x00000BD0
 		private void ExitGameToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(64U, 0U);
 			this.bFinished = false;
 		}
 
-		// Token: 0x06000100 RID: 256 RVA: 0x0000A8E8 File Offset: 0x00008AE8
+		// Token: 0x06000100 RID: 256 RVA: 0x0000AB14 File Offset: 0x00008D14
 		internal void LoadKeyMap()
 		{
 			string text = "config.csv";
@@ -830,7 +847,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x06000101 RID: 257 RVA: 0x0000A9A8 File Offset: 0x00008BA8
+		// Token: 0x06000101 RID: 257 RVA: 0x0000ABCC File Offset: 0x00008DCC
 		protected override void WndProc(ref Message m)
 		{
 			if (m.Msg == 74)
@@ -930,7 +947,7 @@ namespace XGWin
 									Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
 									messageCommand.lParam = 2U;
 									this.commandQueue.Enqueue(messageCommand);
-									goto IL_446;
+									goto IL_43F;
 								}
 							}
 							queue = this.commandQueue;
@@ -939,7 +956,7 @@ namespace XGWin
 								Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
 								messageCommand2.lParam = 0U;
 								this.commandQueue.Enqueue(messageCommand2);
-								goto IL_446;
+								goto IL_43F;
 							}
 						}
 						if (5 == m.WParam.ToInt32())
@@ -954,36 +971,36 @@ namespace XGWin
 			{
 				Form1.APIPostMessageDLL(18, (uint)m.WParam.ToInt32(), (uint)m.LParam.ToInt32());
 			}
-			IL_446:
+			IL_43F:
 			base.WndProc(ref m);
 		}
 
-		// Token: 0x06000102 RID: 258 RVA: 0x000029DF File Offset: 0x00000BDF
+		// Token: 0x06000102 RID: 258 RVA: 0x000029E2 File Offset: 0x00000BE2
 		private string GetSourceDataFileName()
 		{
 			return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Song of Memories\\SOM000.dat";
 		}
 
-		// Token: 0x06000103 RID: 259 RVA: 0x000029F2 File Offset: 0x00000BF2
+		// Token: 0x06000103 RID: 259 RVA: 0x000029F5 File Offset: 0x00000BF5
 		private string GetHashDataFileName()
 		{
 			return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Song of Memories\\SOM001.dat";
 		}
 
-		// Token: 0x06000104 RID: 260 RVA: 0x0000AE20 File Offset: 0x00009020
+		// Token: 0x06000104 RID: 260 RVA: 0x0000B03C File Offset: 0x0000923C
 		private void UpdateHashFile(string dest_fname, string source_fname)
 		{
 			byte[] array = crypt.CreateHash(Form1.LoadFileData(source_fname));
 			Form1.SaveFileData(dest_fname, array, array.Length);
 		}
 
-		// Token: 0x06000105 RID: 261 RVA: 0x00002A05 File Offset: 0x00000C05
+		// Token: 0x06000105 RID: 261 RVA: 0x00002A08 File Offset: 0x00000C08
 		private bool IsMatchHashFile(string hash_fname, string source_fname)
 		{
 			return crypt.IsMatchHash(Form1.LoadFileData(source_fname), Form1.LoadFileData(hash_fname));
 		}
 
-		// Token: 0x06000106 RID: 262 RVA: 0x0000AE44 File Offset: 0x00009044
+		// Token: 0x06000106 RID: 262 RVA: 0x0000B060 File Offset: 0x00009260
 		private static byte[] LoadFileData(string fname)
 		{
 			byte[] array = null;
@@ -1010,7 +1027,7 @@ namespace XGWin
 			return array;
 		}
 
-		// Token: 0x06000107 RID: 263 RVA: 0x0000AEBC File Offset: 0x000090BC
+		// Token: 0x06000107 RID: 263 RVA: 0x0000B0D8 File Offset: 0x000092D8
 		private static void SaveFileData(string fname, byte[] bytes, int data_size)
 		{
 			using (FileStream fileStream = new FileStream(fname, FileMode.Create, FileAccess.Write))
@@ -1019,14 +1036,14 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x06000108 RID: 264 RVA: 0x0000AEF8 File Offset: 0x000090F8
+		// Token: 0x06000108 RID: 264 RVA: 0x0000B114 File Offset: 0x00009314
 		internal void SaveKeyMap()
 		{
 			using (StreamWriter streamWriter = new StreamWriter("config.csv", false, Encoding.UTF8))
 			{
 				foreach (KeyValuePair<KeyConfig.keyCode, Keys> keyValuePair in this.keyMap)
 				{
-					streamWriter.WriteLine((int)keyValuePair.Key + "," + (int)keyValuePair.Value);
+					streamWriter.WriteLine(((int)keyValuePair.Key).ToString() + "," + ((int)keyValuePair.Value).ToString());
 				}
 			}
 		}
@@ -1035,7 +1052,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 		private static extern int SetDisplayFullScreen(string deviceName, int width, int height);
 
-		// Token: 0x0600010A RID: 266
+		// Token: 0x0600010A RID: 266 RVA: 0x0000B1B8 File Offset: 0x000093B8
 		private void Form1_SizeChanged(object sender, EventArgs e)
 		{
 			Screen screen = Screen.FromControl(this);
@@ -1099,7 +1116,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010B RID: 267 RVA: 0x00002A18 File Offset: 0x00000C18
+		// Token: 0x0600010B RID: 267 RVA: 0x00002A1B File Offset: 0x00000C1B
 		private void SetUserLanguage(int val)
 		{
 			if (val > -1 && val < 5)
@@ -1108,7 +1125,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010C RID: 268
+		// Token: 0x0600010C RID: 268 RVA: 0x0000B41C File Offset: 0x0000961C
 		private void SetClientSize(int w, int h, uint mode)
 		{
 			if (w == 0 || h == 0)
@@ -1140,7 +1157,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010D RID: 269 RVA: 0x0000B318 File Offset: 0x00009518
+		// Token: 0x0600010D RID: 269 RVA: 0x0000B554 File Offset: 0x00009754
 		private void ime_TextChanged(object sender, EventArgs e)
 		{
 			Encoding unicode = Encoding.Unicode;
@@ -1179,7 +1196,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010E RID: 270 RVA: 0x00002A29 File Offset: 0x00000C29
+		// Token: 0x0600010E RID: 270 RVA: 0x00002A2C File Offset: 0x00000C2C
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing && this.components != null)
@@ -1189,7 +1206,7 @@ namespace XGWin
 			base.Dispose(disposing);
 		}
 
-		// Token: 0x0600010F RID: 271 RVA: 0x0000B3F4 File Offset: 0x000095F4
+		// Token: 0x0600010F RID: 271
 		private void InitializeComponent(int client_width, int client_height)
 		{
 			this.components = new Container();
@@ -1595,7 +1612,7 @@ namespace XGWin
 			{
 			}
 
-			// Token: 0x06000112 RID: 274 RVA: 0x00002A54 File Offset: 0x00000C54
+			// Token: 0x06000112 RID: 274 RVA: 0x00002A57 File Offset: 0x00000C57
 			public MessageCommand(Form1.MessageType type)
 			{
 				this.type = type;
