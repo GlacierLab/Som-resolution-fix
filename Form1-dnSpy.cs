@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace XGWin
@@ -14,7 +15,7 @@ namespace XGWin
 	// Token: 0x02000039 RID: 57
 	public class Form1 : Form
 	{
-		// Token: 0x060000C5 RID: 197 RVA: 0x00009620 File Offset: 0x00007820
+		// Token: 0x060000C5 RID: 197 RVA: 0x000097CC File Offset: 0x000079CC
 		private string ChangeWindowModeText(bool isFullScreen)
 		{
 			string text = string.Empty;
@@ -39,7 +40,7 @@ namespace XGWin
 			return text;
 		}
 
-		// Token: 0x060000C6 RID: 198 RVA: 0x000096B0 File Offset: 0x000078B0
+		// Token: 0x060000C6 RID: 198 RVA: 0x0000985C File Offset: 0x00007A5C
 		public Form1(params string[] args)
 		{
 			this.commandQueue = new Queue<Form1.MessageCommand>();
@@ -197,7 +198,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x060000C7 RID: 199 RVA: 0x00009EFC File Offset: 0x000080FC
+		// Token: 0x060000C7 RID: 199 RVA: 0x0000A0A8 File Offset: 0x000082A8
 		public Form1(string comm)
 		{
 			this.commandQueue = new Queue<Form1.MessageCommand>();
@@ -219,36 +220,31 @@ namespace XGWin
 			this.PreviewTitleInit(-1);
 			MultimediaTimer multimediaTimer = new MultimediaTimer();
 			string text = File.ReadAllText("targetFPS.txt", Encoding.UTF8);
-			multimediaTimer.Interval = 1000 / int.Parse(text);
-			multimediaTimer.Elapsed += delegate(object o, EventArgs e)
+			EventHandler a91 = null;
+			Task.Run(delegate
 			{
-				if (this.GLError)
+				multimediaTimer.Interval = 1000 / int.Parse(text);
+				MultimediaTimer multimediaTimer2 = multimediaTimer;
+				EventHandler eventHandler;
+				if ((eventHandler = a91) == null)
 				{
-					return;
-				}
-				Queue<Form1.MessageCommand> queue = this.commandQueue;
-				lock (queue)
-				{
-					Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeCommandEnd);
-					this.commandQueue.Enqueue(messageCommand);
-					while (this.commandQueue.Count != 0)
+					eventHandler = (a91 = delegate(object o, EventArgs e)
 					{
-						Form1.MessageCommand messageCommand2 = this.commandQueue.Dequeue();
-						Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
-					}
+						if (this.GLError)
+						{
+							return;
+						}
+						Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeCommandEnd);
+						Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
+						Form1.GLDraw2();
+					});
 				}
-				if (Form1.GLDraw2() == 0)
-				{
-					this.GLError = true;
-					MessageBox.Show("エラーが発生したので、ツールを再起動してください");
-					this.bFinished = true;
-					Application.Exit();
-				}
-			};
-			multimediaTimer.Start();
+				multimediaTimer2.Elapsed += eventHandler;
+				multimediaTimer.Start();
+			});
 		}
 
-		// Token: 0x060000C9 RID: 201 RVA: 0x00002891 File Offset: 0x00000A91
+		// Token: 0x060000C9 RID: 201 RVA: 0x00002888 File Offset: 0x00000A88
 		private void Form1_FormClosing(object sender, FormClosingEventArgs e)
 		{
 			if (!this.bFinished)
@@ -263,7 +259,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "GLInit")]
 		private static extern int GLSetup(IntPtr hwnd, IntPtr hdc);
 
-		// Token: 0x060000CB RID: 203
+		// Token: 0x060000CB RID: 203 RVA: 0x0000A190 File Offset: 0x00008390
 		private void Form1_Load(object sender, EventArgs e)
 		{
 			this.client_height = 720;
@@ -279,7 +275,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "GLInit")]
 		private static extern int GLInit2(IntPtr hwnd, IntPtr hdc, int adr);
 
-		// Token: 0x060000CD RID: 205 RVA: 0x00009FFC File Offset: 0x000081FC
+		// Token: 0x060000CD RID: 205 RVA: 0x0000A200 File Offset: 0x00008400
 		private bool GLInit(IntPtr hwnd, IntPtr hdc, int adr)
 		{
 			if (this.GLError)
@@ -302,7 +298,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "GLInitToTitle")]
 		private static extern int GLInitToTitle2(IntPtr hwnd, IntPtr hdc);
 
-		// Token: 0x060000CF RID: 207
+		// Token: 0x060000CF RID: 207 RVA: 0x000028A3 File Offset: 0x00000AA3
 		private bool GLInitToTitle(IntPtr hwnd, IntPtr hdc)
 		{
 			if (this.GLError)
@@ -328,24 +324,15 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl)]
 		private static extern void APIPostMessageDLL(int type, uint wParam, uint lParam);
 
-		// Token: 0x060000D2 RID: 210
+		// Token: 0x060000D2 RID: 210 RVA: 0x0000A260 File Offset: 0x00008460
 		private void GLDraw()
 		{
 			if (this.GLError)
 			{
 				return;
 			}
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeCommandEnd);
-				this.commandQueue.Enqueue(messageCommand);
-				while (this.commandQueue.Count != 0)
-				{
-					Form1.MessageCommand messageCommand2 = this.commandQueue.Dequeue();
-					Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
-				}
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeCommandEnd);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 			if (Form1.GLDraw2() == 0)
 			{
 				this.GLError = true;
@@ -395,7 +382,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 		private static extern void APIGetErrorLog(StringBuilder lpbuf);
 
-		// Token: 0x060000DD RID: 221 RVA: 0x000028AC File Offset: 0x00000AAC
+		// Token: 0x060000DD RID: 221 RVA: 0x000028DA File Offset: 0x00000ADA
 		private void PreviewTitleInit(int line = -1)
 		{
 			if (!this.GLInitToTitle(base.Handle, this.hdc))
@@ -432,7 +419,7 @@ namespace XGWin
 		[DllImport("Imm32.Dll")]
 		private static extern bool ImmSetOpenStatus(int hIMC, bool fOpen);
 
-		// Token: 0x060000E3 RID: 227 RVA: 0x0000A210 File Offset: 0x00008410
+		// Token: 0x060000E3 RID: 227 RVA: 0x0000A314 File Offset: 0x00008514
 		private void panel1_MouseDown(object sender, MouseEventArgs e)
 		{
 			if (this.inputFlg)
@@ -449,55 +436,39 @@ namespace XGWin
 				this.myText = null;
 				this.inputFlg = false;
 			}
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseDown);
-				messageCommand.wParam = (uint)(e.Button >> 20);
-				this.commandQueue.Enqueue(messageCommand);
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseDown);
+			messageCommand.wParam = (uint)(e.Button >> 20);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000E4 RID: 228 RVA: 0x0000A2F0 File Offset: 0x000084F0
+		// Token: 0x060000E4 RID: 228 RVA: 0x0000A3D4 File Offset: 0x000085D4
 		private void panel1_MouseUp(object sender, MouseEventArgs e)
 		{
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseUp);
-				messageCommand.wParam = (uint)(e.Button >> 20);
-				this.commandQueue.Enqueue(messageCommand);
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseUp);
+			messageCommand.wParam = (uint)(e.Button >> 20);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000E5 RID: 229 RVA: 0x0000A34C File Offset: 0x0000854C
+		// Token: 0x060000E5 RID: 229 RVA: 0x0000A410 File Offset: 0x00008610
 		private void panel1_MouseMove(object sender, MouseEventArgs e)
 		{
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				this.mouse_y = e.Y;
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseMove);
-				float num = 1920f / (float)this.panel1.Width * (float)e.X;
-				float num2 = 1080f / (float)this.panel1.Height * (float)e.Y;
-				messageCommand.lParam = (uint)(((int)num << 16) + (int)num2);
-				this.commandQueue.Enqueue(messageCommand);
-			}
+			this.mouse_y = e.Y;
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseMove);
+			float num = 1920f / (float)this.panel1.Width * (float)e.X;
+			float num2 = 1080f / (float)this.panel1.Height * (float)e.Y;
+			messageCommand.lParam = (uint)(((int)num << 16) + (int)num2);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000E6 RID: 230 RVA: 0x0000A3EC File Offset: 0x000085EC
+		// Token: 0x060000E6 RID: 230 RVA: 0x0000A48C File Offset: 0x0000868C
 		private void panel1_MouseWheel(object sender, MouseEventArgs e)
 		{
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseWheel);
-				messageCommand.lParam = (uint)e.Delta;
-				this.commandQueue.Enqueue(messageCommand);
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseWheel);
+			messageCommand.lParam = (uint)e.Delta;
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000E7 RID: 231 RVA: 0x0000A448 File Offset: 0x00008648
+		// Token: 0x060000E7 RID: 231 RVA: 0x0000A4C4 File Offset: 0x000086C4
 		private bool isArrowKey(KeyEventArgs e)
 		{
 			if (this.keyMap.ContainsValue(e.KeyCode))
@@ -508,7 +479,7 @@ namespace XGWin
 			return false;
 		}
 
-		// Token: 0x060000E8 RID: 232 RVA: 0x0000A4B0 File Offset: 0x000086B0
+		// Token: 0x060000E8 RID: 232 RVA: 0x0000A52C File Offset: 0x0000872C
 		private void Form1_KeyDown(object sender, KeyEventArgs e)
 		{
 			if (this.keyPair.ContainsKey(e.KeyCode) && this.keyPair[e.KeyCode])
@@ -534,59 +505,59 @@ namespace XGWin
 			if (this.keyMap.ContainsValue(e.KeyCode))
 			{
 				KeyConfig.keyCode key = this.keyMap.First((KeyValuePair<KeyConfig.keyCode, Keys> k) => k.Value == e.KeyCode).Key;
-				Queue<Form1.MessageCommand> queue = this.commandQueue;
-				lock (queue)
+				if (this.isShiftDown && this.isArrowKey(e))
 				{
-					if (this.isShiftDown && this.isArrowKey(e))
-					{
-						Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeRStickMove);
-						messageCommand.lParam = this.ConvertStickForce(key, true);
-						this.commandQueue.Enqueue(messageCommand);
-						return;
-					}
-					if (this.isCtrlDown && this.isArrowKey(e))
-					{
-						Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeLStickMove);
-						messageCommand2.lParam = this.ConvertStickForce(key, true);
-						this.commandQueue.Enqueue(messageCommand2);
-						return;
-					}
-					Form1.MessageCommand messageCommand3 = new Form1.MessageCommand(Form1.MessageType.TypeKeyDown);
-					messageCommand3.lParam = (uint)key;
-					this.commandQueue.Enqueue(messageCommand3);
+					Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeRStickMove);
+					messageCommand.lParam = this.ConvertStickForce(key, true);
+					Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 					return;
 				}
-			}
-			if (e.KeyCode == Keys.Return)
-			{
-				if (((Form)sender).ActiveControl is TextBox)
+				if (this.isCtrlDown && this.isArrowKey(e))
 				{
-					Form1.APIGetInput(this.myText.Text);
-					this.myText.TextChanged -= this.ime_TextChanged;
-					base.Controls.Remove(this.myText);
-					this.myText.Dispose();
-					this.myText = null;
-					this.inputFlg = false;
+					Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeLStickMove);
+					messageCommand2.lParam = this.ConvertStickForce(key, true);
+					Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
+					return;
 				}
-				Form1.MessageCommand messageCommand4 = new Form1.MessageCommand(Form1.MessageType.TypeKeyDown);
-				messageCommand4.lParam = 65536U;
-				this.commandQueue.Enqueue(messageCommand4);
+				Form1.MessageCommand messageCommand3 = new Form1.MessageCommand(Form1.MessageType.TypeKeyDown);
+				messageCommand3.lParam = (uint)key;
+				Form1.APIPostMessageDLL((int)messageCommand3.type, messageCommand3.wParam, messageCommand3.lParam);
 				return;
 			}
-			if (e.KeyCode == Keys.Space)
+			else
 			{
-				Form1.MessageCommand messageCommand5 = new Form1.MessageCommand(Form1.MessageType.TypeSpaceKeyDown);
-				messageCommand5.lParam = 131072U;
-				this.commandQueue.Enqueue(messageCommand5);
+				if (e.KeyCode == Keys.Return)
+				{
+					if (((Form)sender).ActiveControl is TextBox)
+					{
+						Form1.APIGetInput(this.myText.Text);
+						this.myText.TextChanged -= this.ime_TextChanged;
+						base.Controls.Remove(this.myText);
+						this.myText.Dispose();
+						this.myText = null;
+						this.inputFlg = false;
+					}
+					Form1.MessageCommand messageCommand4 = new Form1.MessageCommand(Form1.MessageType.TypeKeyDown);
+					messageCommand4.lParam = 65536U;
+					Form1.APIPostMessageDLL((int)messageCommand4.type, messageCommand4.wParam, messageCommand4.lParam);
+					return;
+				}
+				if (e.KeyCode == Keys.Space)
+				{
+					Form1.MessageCommand messageCommand5 = new Form1.MessageCommand(Form1.MessageType.TypeSpaceKeyDown);
+					messageCommand5.lParam = 131072U;
+					Form1.APIPostMessageDLL((int)messageCommand5.type, messageCommand5.wParam, messageCommand5.lParam);
+					return;
+				}
+				if (e.KeyCode == Keys.Tab)
+				{
+					this.FullscreenToolStripMenuItem_Click(this, new EventArgs());
+				}
 				return;
-			}
-			if (e.KeyCode == Keys.Tab)
-			{
-				this.FullscreenToolStripMenuItem_Click(this, new EventArgs());
 			}
 		}
 
-		// Token: 0x060000E9 RID: 233 RVA: 0x0000A760 File Offset: 0x00008960
+		// Token: 0x060000E9 RID: 233 RVA: 0x0000A7E0 File Offset: 0x000089E0
 		private void Form1_KeyUp(object sender, KeyEventArgs e)
 		{
 			if (!this.keyPair.ContainsKey(e.KeyCode) || !this.keyPair[e.KeyCode])
@@ -598,110 +569,106 @@ namespace XGWin
 			{
 				this.isShiftDown = false;
 				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeRStickReset);
-				this.commandQueue.Enqueue(messageCommand);
+				Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 			}
 			if (e.KeyCode == Keys.ControlKey)
 			{
 				this.isCtrlDown = false;
 				Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeLStickReset);
-				this.commandQueue.Enqueue(messageCommand2);
+				Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
 			}
 			if (this.keyMap.ContainsValue(e.KeyCode))
 			{
 				KeyConfig.keyCode key = this.keyMap.First((KeyValuePair<KeyConfig.keyCode, Keys> k) => k.Value == e.KeyCode).Key;
-				Queue<Form1.MessageCommand> queue = this.commandQueue;
-				lock (queue)
+				if (this.isShiftDown && this.isArrowKey(e))
 				{
-					if (this.isShiftDown && this.isArrowKey(e))
-					{
-						Form1.MessageCommand messageCommand3 = new Form1.MessageCommand(Form1.MessageType.TypeRStickMove);
-						messageCommand3.lParam = this.ConvertStickForce(key, false);
-						this.commandQueue.Enqueue(messageCommand3);
-						return;
-					}
-					if (this.isCtrlDown && this.isArrowKey(e))
-					{
-						Form1.MessageCommand messageCommand4 = new Form1.MessageCommand(Form1.MessageType.TypeLStickMove);
-						messageCommand4.lParam = this.ConvertStickForce(key, false);
-						this.commandQueue.Enqueue(messageCommand4);
-						return;
-					}
-					Form1.MessageCommand messageCommand5 = new Form1.MessageCommand(Form1.MessageType.TypeKeyUp);
-					messageCommand5.lParam = (uint)key;
-					this.commandQueue.Enqueue(messageCommand5);
+					Form1.MessageCommand messageCommand3 = new Form1.MessageCommand(Form1.MessageType.TypeRStickMove);
+					messageCommand3.lParam = this.ConvertStickForce(key, false);
+					Form1.APIPostMessageDLL((int)messageCommand3.type, messageCommand3.wParam, messageCommand3.lParam);
 					return;
 				}
-			}
-			if (e.KeyCode == Keys.Return)
-			{
-				Form1.MessageCommand messageCommand6 = new Form1.MessageCommand(Form1.MessageType.TypeKeyUp);
-				messageCommand6.lParam = 65536U;
-				this.commandQueue.Enqueue(messageCommand6);
+				if (this.isCtrlDown && this.isArrowKey(e))
+				{
+					Form1.MessageCommand messageCommand4 = new Form1.MessageCommand(Form1.MessageType.TypeLStickMove);
+					messageCommand4.lParam = this.ConvertStickForce(key, false);
+					Form1.APIPostMessageDLL((int)messageCommand4.type, messageCommand4.wParam, messageCommand4.lParam);
+					return;
+				}
+				Form1.MessageCommand messageCommand5 = new Form1.MessageCommand(Form1.MessageType.TypeKeyUp);
+				messageCommand5.lParam = (uint)key;
+				Form1.APIPostMessageDLL((int)messageCommand5.type, messageCommand5.wParam, messageCommand5.lParam);
 				return;
 			}
-			if (e.KeyCode == Keys.Space)
+			else
 			{
-				Form1.MessageCommand messageCommand7 = new Form1.MessageCommand(Form1.MessageType.TypeSpaceKeyUp);
-				messageCommand7.lParam = 131072U;
-				this.commandQueue.Enqueue(messageCommand7);
+				if (e.KeyCode == Keys.Return)
+				{
+					Form1.MessageCommand messageCommand6 = new Form1.MessageCommand(Form1.MessageType.TypeKeyUp);
+					messageCommand6.lParam = 65536U;
+					Form1.APIPostMessageDLL((int)messageCommand6.type, messageCommand6.wParam, messageCommand6.lParam);
+					return;
+				}
+				if (e.KeyCode == Keys.Space)
+				{
+					Form1.MessageCommand messageCommand7 = new Form1.MessageCommand(Form1.MessageType.TypeSpaceKeyUp);
+					messageCommand7.lParam = 131072U;
+					Form1.APIPostMessageDLL((int)messageCommand7.type, messageCommand7.wParam, messageCommand7.lParam);
+				}
+				return;
 			}
 		}
 
-		// Token: 0x060000EA RID: 234 RVA: 0x000028DA File Offset: 0x00000ADA
+		// Token: 0x060000EA RID: 234 RVA: 0x00002908 File Offset: 0x00000B08
 		private uint ConvertStickForce(KeyConfig.keyCode code, bool isDown)
 		{
-			return (uint)((ulong)((ulong)code << 16) + (ulong)(isDown ? 128L : 0L));
+			return (uint)(((long)code << 16) + (isDown ? 128L : 0L));
 		}
 
-		// Token: 0x060000EB RID: 235 RVA: 0x0000A988 File Offset: 0x00008B88
+		// Token: 0x060000EB RID: 235 RVA: 0x0000AA24 File Offset: 0x00008C24
 		private void Form1_LostFocus(object sender, EventArgs e)
 		{
 			this.isShiftDown = false;
 			this.isCtrlDown = false;
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				this.commandQueue.Enqueue(new Form1.MessageCommand(Form1.MessageType.TypeRStickReset));
-				this.commandQueue.Enqueue(new Form1.MessageCommand(Form1.MessageType.TypeLStickReset));
-				this.commandQueue.Enqueue(new Form1.MessageCommand(Form1.MessageType.TypeButtonReset));
-				this.commandQueue.Enqueue(new Form1.MessageCommand(Form1.MessageType.TypeMouseReset));
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeRStickReset);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
+			messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeLStickReset);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
+			messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeButtonReset);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
+			messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMouseReset);
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000EC RID: 236 RVA: 0x0000AA18 File Offset: 0x00008C18
+		// Token: 0x060000EC RID: 236 RVA: 0x0000AABC File Offset: 0x00008CBC
 		private void SetSystemMenuTrg(uint eventMask, uint w)
 		{
-			Queue<Form1.MessageCommand> queue = this.commandQueue;
-			lock (queue)
-			{
-				Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMenuBarEvent);
-				messageCommand.lParam = eventMask;
-				messageCommand.wParam = w;
-				this.commandQueue.Enqueue(messageCommand);
-			}
+			Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeMenuBarEvent);
+			messageCommand.lParam = eventMask;
+			messageCommand.wParam = w;
+			Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 		}
 
-		// Token: 0x060000ED RID: 237 RVA: 0x000028EF File Offset: 0x00000AEF
+		// Token: 0x060000ED RID: 237 RVA: 0x0000291E File Offset: 0x00000B1E
 		private void VersionInfoToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(32768U, 0U);
 			this._version_dialog.Show();
 		}
 
-		// Token: 0x060000EE RID: 238 RVA: 0x00002908 File Offset: 0x00000B08
+		// Token: 0x060000EE RID: 238 RVA: 0x00002937 File Offset: 0x00000B37
 		private void KeyConfigToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(65536U, 0U);
 			Form1._keyconfig_dialog.Show(this);
 		}
 
-		// Token: 0x060000EF RID: 239 RVA: 0x00002921 File Offset: 0x00000B21
+		// Token: 0x060000EF RID: 239 RVA: 0x00002950 File Offset: 0x00000B50
 		private int calcSize(int i0, int i1, float scale)
 		{
 			return (int)((float)i0 * scale - (float)i1 * scale);
 		}
 
-		// Token: 0x060000F0 RID: 240 RVA: 0x0000AA74 File Offset: 0x00008C74
+		// Token: 0x060000F0 RID: 240 RVA: 0x0000AAF8 File Offset: 0x00008CF8
 		private void HelpToolStripMenuItem1_Click(object sender, EventArgs e)
 		{
 			switch (this.userLanguage)
@@ -725,99 +692,99 @@ namespace XGWin
 			this.SetSystemMenuTrg(131072U, 0U);
 		}
 
-		// Token: 0x060000F1 RID: 241 RVA: 0x0000292D File Offset: 0x00000B2D
+		// Token: 0x060000F1 RID: 241 RVA: 0x0000295C File Offset: 0x00000B5C
 		private void ChartToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(1024U, 0U);
 		}
 
-		// Token: 0x060000F2 RID: 242 RVA: 0x0000293B File Offset: 0x00000B3B
+		// Token: 0x060000F2 RID: 242 RVA: 0x0000296A File Offset: 0x00000B6A
 		private void D4UStatusToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(2048U, 0U);
 		}
 
-		// Token: 0x060000F3 RID: 243 RVA: 0x00002949 File Offset: 0x00000B49
+		// Token: 0x060000F3 RID: 243 RVA: 0x00002978 File Offset: 0x00000B78
 		private void BackLogToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(4096U, 0U);
 		}
 
-		// Token: 0x060000F4 RID: 244 RVA: 0x00002957 File Offset: 0x00000B57
+		// Token: 0x060000F4 RID: 244 RVA: 0x00002986 File Offset: 0x00000B86
 		private void DictionaryToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(8192U, 0U);
 		}
 
-		// Token: 0x060000F5 RID: 245 RVA: 0x00002965 File Offset: 0x00000B65
+		// Token: 0x060000F5 RID: 245 RVA: 0x00002994 File Offset: 0x00000B94
 		private void OptionToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(16384U, 0U);
 		}
 
-		// Token: 0x060000F6 RID: 246 RVA: 0x00002973 File Offset: 0x00000B73
+		// Token: 0x060000F6 RID: 246 RVA: 0x000029A2 File Offset: 0x00000BA2
 		private void AutoToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(128U, 0U);
 		}
 
-		// Token: 0x060000F7 RID: 247 RVA: 0x00002981 File Offset: 0x00000B81
+		// Token: 0x060000F7 RID: 247 RVA: 0x000029B0 File Offset: 0x00000BB0
 		private void TextSkipToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(256U, 0U);
 		}
 
-		// Token: 0x060000F8 RID: 248 RVA: 0x0000298F File Offset: 0x00000B8F
+		// Token: 0x060000F8 RID: 248 RVA: 0x000029BE File Offset: 0x00000BBE
 		private void HideTextAreaToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(512U, 0U);
 		}
 
-		// Token: 0x060000F9 RID: 249 RVA: 0x0000299D File Offset: 0x00000B9D
+		// Token: 0x060000F9 RID: 249 RVA: 0x000029CC File Offset: 0x00000BCC
 		private void QuickSaveToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(1U, 0U);
 		}
 
-		// Token: 0x060000FA RID: 250 RVA: 0x000029A7 File Offset: 0x00000BA7
+		// Token: 0x060000FA RID: 250 RVA: 0x000029D6 File Offset: 0x00000BD6
 		private void QuickLoadToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(2U, 0U);
 		}
 
-		// Token: 0x060000FB RID: 251 RVA: 0x000029B1 File Offset: 0x00000BB1
+		// Token: 0x060000FB RID: 251 RVA: 0x000029E0 File Offset: 0x00000BE0
 		private void SaveToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(4U, 0U);
 		}
 
-		// Token: 0x060000FC RID: 252 RVA: 0x000029BB File Offset: 0x00000BBB
+		// Token: 0x060000FC RID: 252 RVA: 0x000029EA File Offset: 0x00000BEA
 		private void LoadToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(8U, 0U);
 		}
 
-		// Token: 0x060000FD RID: 253 RVA: 0x0000AAF0 File Offset: 0x00008CF0
+		// Token: 0x060000FD RID: 253 RVA: 0x0000AB74 File Offset: 0x00008D74
 		private void FullscreenToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			uint num = ((base.WindowState == FormWindowState.Maximized) ? 0U : 2U);
 			base.WindowState = (FormWindowState)num;
 		}
 
-		// Token: 0x060000FE RID: 254 RVA: 0x000029C5 File Offset: 0x00000BC5
+		// Token: 0x060000FE RID: 254 RVA: 0x000029F4 File Offset: 0x00000BF4
 		private void BackToTitleToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(32U, 0U);
 		}
 
-		// Token: 0x060000FF RID: 255 RVA: 0x000029D0 File Offset: 0x00000BD0
+		// Token: 0x060000FF RID: 255 RVA: 0x000029FF File Offset: 0x00000BFF
 		private void ExitGameToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			this.SetSystemMenuTrg(64U, 0U);
 			this.bFinished = false;
 		}
 
-		// Token: 0x06000100 RID: 256 RVA: 0x0000AB14 File Offset: 0x00008D14
+		// Token: 0x06000100 RID: 256 RVA: 0x0000AB98 File Offset: 0x00008D98
 		internal void LoadKeyMap()
 		{
 			string text = "config.csv";
@@ -847,7 +814,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x06000101 RID: 257 RVA: 0x0000ABCC File Offset: 0x00008DCC
+		// Token: 0x06000101 RID: 257 RVA: 0x0000AC50 File Offset: 0x00008E50
 		protected override void WndProc(ref Message m)
 		{
 			if (m.Msg == 74)
@@ -934,36 +901,25 @@ namespace XGWin
 					{
 						this.UpdateHashFile(this.GetHashDataFileName(), this.GetSourceDataFileName());
 					}
-					else
+					else if (4 == m.WParam.ToInt32())
 					{
-						if (4 == m.WParam.ToInt32())
+						if (this.IsMatchHashFile(this.GetHashDataFileName(), this.GetSourceDataFileName()))
 						{
-							Queue<Form1.MessageCommand> queue;
-							if (this.IsMatchHashFile(this.GetHashDataFileName(), this.GetSourceDataFileName()))
-							{
-								queue = this.commandQueue;
-								lock (queue)
-								{
-									Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
-									messageCommand.lParam = 2U;
-									this.commandQueue.Enqueue(messageCommand);
-									goto IL_43F;
-								}
-							}
-							queue = this.commandQueue;
-							lock (queue)
-							{
-								Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
-								messageCommand2.lParam = 0U;
-								this.commandQueue.Enqueue(messageCommand2);
-								goto IL_43F;
-							}
+							Form1.MessageCommand messageCommand = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
+							messageCommand.lParam = 2U;
+							Form1.APIPostMessageDLL((int)messageCommand.type, messageCommand.wParam, messageCommand.lParam);
 						}
-						if (5 == m.WParam.ToInt32())
+						else
 						{
-							this.bFinished = true;
-							base.Close();
+							Form1.MessageCommand messageCommand2 = new Form1.MessageCommand(Form1.MessageType.TypeHashCheck);
+							messageCommand2.lParam = 0U;
+							Form1.APIPostMessageDLL((int)messageCommand2.type, messageCommand2.wParam, messageCommand2.lParam);
 						}
+					}
+					else if (5 == m.WParam.ToInt32())
+					{
+						this.bFinished = true;
+						base.Close();
 					}
 				}
 			}
@@ -971,36 +927,35 @@ namespace XGWin
 			{
 				Form1.APIPostMessageDLL(18, (uint)m.WParam.ToInt32(), (uint)m.LParam.ToInt32());
 			}
-			IL_43F:
 			base.WndProc(ref m);
 		}
 
-		// Token: 0x06000102 RID: 258 RVA: 0x000029E2 File Offset: 0x00000BE2
+		// Token: 0x06000102 RID: 258 RVA: 0x00002A11 File Offset: 0x00000C11
 		private string GetSourceDataFileName()
 		{
 			return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Song of Memories\\SOM000.dat";
 		}
 
-		// Token: 0x06000103 RID: 259 RVA: 0x000029F5 File Offset: 0x00000BF5
+		// Token: 0x06000103 RID: 259 RVA: 0x00002A24 File Offset: 0x00000C24
 		private string GetHashDataFileName()
 		{
 			return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\Song of Memories\\SOM001.dat";
 		}
 
-		// Token: 0x06000104 RID: 260 RVA: 0x0000B03C File Offset: 0x0000923C
+		// Token: 0x06000104 RID: 260 RVA: 0x0000B078 File Offset: 0x00009278
 		private void UpdateHashFile(string dest_fname, string source_fname)
 		{
 			byte[] array = crypt.CreateHash(Form1.LoadFileData(source_fname));
 			Form1.SaveFileData(dest_fname, array, array.Length);
 		}
 
-		// Token: 0x06000105 RID: 261 RVA: 0x00002A08 File Offset: 0x00000C08
+		// Token: 0x06000105 RID: 261 RVA: 0x00002A37 File Offset: 0x00000C37
 		private bool IsMatchHashFile(string hash_fname, string source_fname)
 		{
 			return crypt.IsMatchHash(Form1.LoadFileData(source_fname), Form1.LoadFileData(hash_fname));
 		}
 
-		// Token: 0x06000106 RID: 262 RVA: 0x0000B060 File Offset: 0x00009260
+		// Token: 0x06000106 RID: 262 RVA: 0x0000B09C File Offset: 0x0000929C
 		private static byte[] LoadFileData(string fname)
 		{
 			byte[] array = null;
@@ -1027,7 +982,7 @@ namespace XGWin
 			return array;
 		}
 
-		// Token: 0x06000107 RID: 263 RVA: 0x0000B0D8 File Offset: 0x000092D8
+		// Token: 0x06000107 RID: 263 RVA: 0x0000B114 File Offset: 0x00009314
 		private static void SaveFileData(string fname, byte[] bytes, int data_size)
 		{
 			using (FileStream fileStream = new FileStream(fname, FileMode.Create, FileAccess.Write))
@@ -1036,7 +991,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x06000108 RID: 264 RVA: 0x0000B114 File Offset: 0x00009314
+		// Token: 0x06000108 RID: 264 RVA: 0x0000B150 File Offset: 0x00009350
 		internal void SaveKeyMap()
 		{
 			using (StreamWriter streamWriter = new StreamWriter("config.csv", false, Encoding.UTF8))
@@ -1052,7 +1007,7 @@ namespace XGWin
 		[DllImport("XGWinDll.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 		private static extern int SetDisplayFullScreen(string deviceName, int width, int height);
 
-		// Token: 0x0600010A RID: 266 RVA: 0x0000B1B8 File Offset: 0x000093B8
+		// Token: 0x0600010A RID: 266
 		private void Form1_SizeChanged(object sender, EventArgs e)
 		{
 			Screen screen = Screen.FromControl(this);
@@ -1076,7 +1031,6 @@ namespace XGWin
 				base.WindowState = FormWindowState.Normal;
 				base.SizeChanged += this.Form1_SizeChanged;
 			}
-			this.SetSystemMenuTrg(16U, (uint)windowState);
 			this.FullscreenToolStripMenuItem.Text = this.ChangeWindowModeText(base.WindowState == FormWindowState.Maximized);
 			if (base.Width / 16 * 9 > base.Height)
 			{
@@ -1116,7 +1070,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010B RID: 267 RVA: 0x00002A1B File Offset: 0x00000C1B
+		// Token: 0x0600010B RID: 267 RVA: 0x00002A4A File Offset: 0x00000C4A
 		private void SetUserLanguage(int val)
 		{
 			if (val > -1 && val < 5)
@@ -1125,7 +1079,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010C RID: 268 RVA: 0x0000B41C File Offset: 0x0000961C
+		// Token: 0x0600010C RID: 268 RVA: 0x0000B458 File Offset: 0x00009658
 		private void SetClientSize(int w, int h, uint mode)
 		{
 			if (w == 0 || h == 0)
@@ -1157,7 +1111,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010D RID: 269 RVA: 0x0000B554 File Offset: 0x00009754
+		// Token: 0x0600010D RID: 269 RVA: 0x0000B590 File Offset: 0x00009790
 		private void ime_TextChanged(object sender, EventArgs e)
 		{
 			Encoding unicode = Encoding.Unicode;
@@ -1196,7 +1150,7 @@ namespace XGWin
 			}
 		}
 
-		// Token: 0x0600010E RID: 270 RVA: 0x00002A2C File Offset: 0x00000C2C
+		// Token: 0x0600010E RID: 270 RVA: 0x00002A5B File Offset: 0x00000C5B
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing && this.components != null)
@@ -1206,7 +1160,7 @@ namespace XGWin
 			base.Dispose(disposing);
 		}
 
-		// Token: 0x0600010F RID: 271
+		// Token: 0x0600010F RID: 271 RVA: 0x0000B66C File Offset: 0x0000986C
 		private void InitializeComponent(int client_width, int client_height)
 		{
 			this.components = new Container();
@@ -1612,7 +1566,7 @@ namespace XGWin
 			{
 			}
 
-			// Token: 0x06000112 RID: 274 RVA: 0x00002A57 File Offset: 0x00000C57
+			// Token: 0x06000112 RID: 274 RVA: 0x00002A86 File Offset: 0x00000C86
 			public MessageCommand(Form1.MessageType type)
 			{
 				this.type = type;
